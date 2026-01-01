@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Personal Siren</title>
+    <title>Siren Reminder</title>
     <style>
         body {
             margin: 0;
@@ -12,142 +12,223 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #111;
+            background-color: #1a1a1a;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow: hidden; /* Prevents scrolling */
-        }
-        #sirenBtn {
-            width: 80vw;
-            height: 80vw;
-            max-width: 300px;
-            max-height: 300px;
-            border-radius: 50%;
-            border: 8px solid #ff4444;
-            background-color: #cc0000;
             color: white;
-            font-size: 2rem;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        /* The Reminder Input Section */
+        .setup-box {
+            background: #2d2d2d;
+            padding: 25px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 350px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: opacity 0.3s;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: #aaa;
+            text-align: left;
+            margin-bottom: -5px;
+        }
+
+        input {
+            background: #404040;
+            border: 1px solid #555;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            width: 100%;
+            box-sizing: border-box; /* Fixes padding issues */
+        }
+        
+        input:focus { outline: 2px solid #007AFF; border-color: transparent; }
+
+        /* The Big "Set" Button */
+        #actionBtn {
+            background-color: #007AFF;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* The "Alert Mode" Overlay (Hidden by default) */
+        #alertOverlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: black;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .flash-bg { animation: strobe 0.4s infinite; }
+        @keyframes strobe {
+            0% { background-color: #ff0000; }
+            50% { background-color: #0000ff; }
+            100% { background-color: #ff0000; }
+        }
+
+        #reminderText {
+            font-size: 3rem;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.4);
-            cursor: pointer;
-            transition: all 0.2s;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-            z-index: 10;
-        }
-        
-        /* Flashing Animation Background */
-        .flash-bg {
-            animation: bg-strobe 0.5s infinite;
-        }
-        
-        @keyframes bg-strobe {
-            0% { background-color: #111; }
-            50% { background-color: #ff0000; }
-            100% { background-color: #0000ff; }
+            margin-bottom: 50px;
+            padding: 20px;
+            line-height: 1.1;
+            text-shadow: 0 0 10px black;
         }
 
-        /* Pulsing Button */
-        .active-btn {
-            background-color: #fff !important;
-            color: #cc0000 !important;
-            border-color: #fff !important;
-            transform: scale(1.05);
-            box-shadow: 0 0 80px rgba(255, 255, 255, 0.8) !important;
+        #stopBtn {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: white;
+            color: black;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: none;
+            box-shadow: 0 0 50px rgba(255,255,255,0.5);
         }
 
-        .status-text {
-            color: #666;
-            margin-top: 20px;
-            font-size: 0.9rem;
-        }
+        /* Status Text */
+        #status { margin-top: 20px; color: #888; font-size: 0.9rem; }
+        .hidden { display: none !important; }
+
     </style>
 </head>
 <body id="body">
 
-    <button id="sirenBtn">ACTIVATE</button>
-    <div class="status-text" id="status">Ready</div>
+    <div class="setup-box" id="setupBox">
+        <h2 style="margin-top:0;">New Reminder</h2>
+        
+        <label>Remind me to:</label>
+        <input type="text" id="noteInput" placeholder="e.g. Wake Up!">
+
+        <label>At this time:</label>
+        <input type="time" id="timeInput">
+
+        <button id="actionBtn">Start Reminder</button>
+        <div id="status">Screen must stay UNLOCKED</div>
+    </div>
+
+    <div id="alertOverlay">
+        <div id="reminderText">REMINDER!</div>
+        <button id="stopBtn">I'M AWAKE<br>(STOP)</button>
+    </div>
+
+    <video id="wakeVideo" playsinline muted loop style="height:1px;width:1px;opacity:0;position:absolute;">
+         <source src="data:video/mp4;base64,AAAAHGZ0eXBpc29tAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAGF21kYXQAAAGzABAHAAABthADAQAAZ5gACJv/AALuAAAAAAAAAAAAB5iWAAQAAAAAAQAAAAEAAAAxYXZjQwAAAAAmAAEAAv/8AAAAAwr/wAADAAABAAAAAQAAAAAAAAAA//4AAN5kAAAAGWdlbmVyaWMgbWFwZCBieSBET0JPIDEwMAAABnJtb292AAAAbG12aGQAAAAAAAAAAAAAAAAAAAPoAAAAKAABAAABAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAGGlvZHMAAAAAEICAgAcBAQAAAQAAABl0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAKAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAEAAAABAAAAAAAAAAAAABAAAAAAjAAAAAamVkdHMAAAAwZWxzdAAAAAAAAAABAAAAMAAAAAAQAAAAAAABAAAAAAABAAAAAQAAAAAAAQAAd21kaWEAAAAgbWRoZAAAAAAAAAAAAAAAAAAAB9AAABdDAAAAAAAANWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABVideoSGFuZGxlcgAAAAFzbWluZgAAABR2bWhkAAAAAQAAAAAAAAAAAAAAJGRpbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAABMHN0YmwAAACwc3RzZAAAAAAAAAABAAAAhGF2YzEAAAAAAAAAAQAAAAEAAAABAAAAAAAzYXZjQwAAAAAmAAEAAv/8AAAAAwr/wAADAAABAAAAAQAAAAAAAAAA//4AAN5kAAAAGWdlbmVyaWMgbWFwZCBieSBET0JPIDEwMAAAAAAAAAAAAAAAAAAAAAAAABj//wAAAB5NUEU0IEdlbmVyaWMgQWdjIEluZm8AAAABc3R0cwAAAAAAAAABAAAAAQAAABAAAAA0c3RzYwAAAAAAAAABAAAAAQAAAAEAAAABAAAAFHN0c3oAAAAAAAAAEAAAAAAAABhzdGNvAAAAAAAAAAEAAADcAAAAYXVkdGEAAAAxbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcgAAAAAAAAAAAAAAAAAAAAA=" type="video/mp4">
+    </video>
 
     <script>
-        const btn = document.getElementById('sirenBtn');
-        const body = document.getElementById('body');
+        const setupBox = document.getElementById('setupBox');
+        const alertOverlay = document.getElementById('alertOverlay');
+        const noteInput = document.getElementById('noteInput');
+        const timeInput = document.getElementById('timeInput');
+        const actionBtn = document.getElementById('actionBtn');
+        const reminderText = document.getElementById('reminderText');
+        const stopBtn = document.getElementById('stopBtn');
         const status = document.getElementById('status');
-        
-        let isPlaying = false;
-        let audioCtx;
-        let osc;
-        let lfo;
-        let gainNode;
+        const wakeVideo = document.getElementById('wakeVideo');
 
-        // Function to create the Siren Sound (Wail)
-        function playSiren() {
-            // 1. Init Audio Context (Must be done on user gesture)
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
+        let checkInterval;
+        let audioCtx, osc, lfo, gainNode;
 
-            // 2. Create Oscillator (The Sound)
+        // --- AUDIO SYSTEM ---
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function startAlarm() {
+            initAudio();
             osc = audioCtx.createOscillator();
-            osc.type = 'sawtooth'; // Harsh, piercing wave type
-            osc.frequency.value = 600; // Base frequency
-
-            // 3. Create LFO (The "Wee-Woo" movement)
+            osc.type = 'sawtooth';
+            osc.frequency.value = 600;
             lfo = audioCtx.createOscillator();
             lfo.type = 'sine';
-            lfo.frequency.value = 4; // Speed of the cycle (4 times per second)
-
-            // 4. Create Gain (Volume to boost LFO effect on pitch)
+            lfo.frequency.value = 4;
             const lfoGain = audioCtx.createGain();
-            lfoGain.gain.value = 200; // How wide the pitch swing is
-
-            // 5. Master Volume
+            lfoGain.gain.value = 200;
             gainNode = audioCtx.createGain();
-            gainNode.gain.value = 1.0; // Max volume
-
-            // 6. Connect the wiring
-            // LFO -> LFO Gain -> Oscillator Frequency (Modulates pitch)
+            gainNode.gain.value = 1.0;
             lfo.connect(lfoGain);
             lfoGain.connect(osc.frequency);
-            
-            // Oscillator -> Master Volume -> Speakers
             osc.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-
-            // 7. Start
             osc.start();
             lfo.start();
         }
 
-        function stopSiren() {
+        function stopAlarm() {
             if (osc) {
-                // Ramp volume down slightly to avoid "pop" sound
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-                osc.stop(audioCtx.currentTime + 0.1);
-                lfo.stop(audioCtx.currentTime + 0.1);
+                osc.stop();
+                lfo.stop();
+                osc = null;
             }
         }
 
-        btn.addEventListener('click', () => {
-            if (!isPlaying) {
-                // START
-                playSiren();
-                btn.textContent = "STOP";
-                btn.classList.add('active-btn');
-                body.classList.add('flash-bg');
-                status.textContent = "SIREN ACTIVE";
-                status.style.color = "white";
-                isPlaying = true;
-            } else {
-                // STOP
-                stopSiren();
-                btn.textContent = "ACTIVATE";
-                btn.classList.remove('active-btn');
-                body.classList.remove('flash-bg');
-                status.textContent = "Ready";
-                status.style.color = "#666";
-                isPlaying = false;
-            }
+        // --- APP LOGIC ---
+        actionBtn.addEventListener('click', () => {
+            if (!timeInput.value) return alert('Set a time!');
+            
+            // 1. Prepare Audio & Screen Lock
+            initAudio();
+            wakeVideo.play().catch(e => console.log("Wake lock error", e));
+
+            // 2. Lock UI
+            setupBox.style.opacity = '0.5';
+            actionBtn.textContent = "Waiting for " + timeInput.value + "...";
+            actionBtn.disabled = true;
+            status.textContent = "⚠️ Leave this app OPEN on screen.";
+
+            // 3. Start Checking Time
+            checkInterval = setInterval(() => {
+                const now = new Date();
+                const nowStr = String(now.getHours()).padStart(2,'0') + ":" + String(now.getMinutes()).padStart(2,'0');
+
+                if (nowStr === timeInput.value) {
+                    triggerReminder();
+                }
+            }, 1000);
+        });
+
+        function triggerReminder() {
+            clearInterval(checkInterval);
+            
+            // Show Message
+            const msg = noteInput.value || "REMINDER!";
+            reminderText.textContent = msg;
+
+            // Show Alert Screen
+            alertOverlay.style.display = 'flex';
+            alertOverlay.classList.add('flash-bg');
+            setupBox.classList.add('hidden');
+
+            // Scream
+            startAlarm();
+        }
+
+        stopBtn.addEventListener('click', () => {
+            stopAlarm();
+            location.reload(); // Reloads page to reset everything cleanly
         });
     </script>
 </body>
