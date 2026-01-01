@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Personal Siren</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #111;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden; /* Prevents scrolling */
+        }
+        #sirenBtn {
+            width: 80vw;
+            height: 80vw;
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 50%;
+            border: 8px solid #ff4444;
+            background-color: #cc0000;
+            color: white;
+            font-size: 2rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.4);
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            z-index: 10;
+        }
+        
+        /* Flashing Animation Background */
+        .flash-bg {
+            animation: bg-strobe 0.5s infinite;
+        }
+        
+        @keyframes bg-strobe {
+            0% { background-color: #111; }
+            50% { background-color: #ff0000; }
+            100% { background-color: #0000ff; }
+        }
+
+        /* Pulsing Button */
+        .active-btn {
+            background-color: #fff !important;
+            color: #cc0000 !important;
+            border-color: #fff !important;
+            transform: scale(1.05);
+            box-shadow: 0 0 80px rgba(255, 255, 255, 0.8) !important;
+        }
+
+        .status-text {
+            color: #666;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body id="body">
+
+    <button id="sirenBtn">ACTIVATE</button>
+    <div class="status-text" id="status">Ready</div>
+
+    <script>
+        const btn = document.getElementById('sirenBtn');
+        const body = document.getElementById('body');
+        const status = document.getElementById('status');
+        
+        let isPlaying = false;
+        let audioCtx;
+        let osc;
+        let lfo;
+        let gainNode;
+
+        // Function to create the Siren Sound (Wail)
+        function playSiren() {
+            // 1. Init Audio Context (Must be done on user gesture)
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            // 2. Create Oscillator (The Sound)
+            osc = audioCtx.createOscillator();
+            osc.type = 'sawtooth'; // Harsh, piercing wave type
+            osc.frequency.value = 600; // Base frequency
+
+            // 3. Create LFO (The "Wee-Woo" movement)
+            lfo = audioCtx.createOscillator();
+            lfo.type = 'sine';
+            lfo.frequency.value = 4; // Speed of the cycle (4 times per second)
+
+            // 4. Create Gain (Volume to boost LFO effect on pitch)
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 200; // How wide the pitch swing is
+
+            // 5. Master Volume
+            gainNode = audioCtx.createGain();
+            gainNode.gain.value = 1.0; // Max volume
+
+            // 6. Connect the wiring
+            // LFO -> LFO Gain -> Oscillator Frequency (Modulates pitch)
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            
+            // Oscillator -> Master Volume -> Speakers
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            // 7. Start
+            osc.start();
+            lfo.start();
+        }
+
+        function stopSiren() {
+            if (osc) {
+                // Ramp volume down slightly to avoid "pop" sound
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.stop(audioCtx.currentTime + 0.1);
+                lfo.stop(audioCtx.currentTime + 0.1);
+            }
+        }
+
+        btn.addEventListener('click', () => {
+            if (!isPlaying) {
+                // START
+                playSiren();
+                btn.textContent = "STOP";
+                btn.classList.add('active-btn');
+                body.classList.add('flash-bg');
+                status.textContent = "SIREN ACTIVE";
+                status.style.color = "white";
+                isPlaying = true;
+            } else {
+                // STOP
+                stopSiren();
+                btn.textContent = "ACTIVATE";
+                btn.classList.remove('active-btn');
+                body.classList.remove('flash-bg');
+                status.textContent = "Ready";
+                status.style.color = "#666";
+                isPlaying = false;
+            }
+        });
+    </script>
+</body>
+</html>
